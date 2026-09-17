@@ -420,6 +420,28 @@ function sendBot(){
 $("send").addEventListener("click",sendBot);
 $("question").addEventListener("keydown",e=>{if(e.key==="Enter")sendBot();});
 </script>
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBtcT4XJCnvSHuacZKkmh5TgL34DogSzPs",
+    authDomain: "pro-spark-3951d.firebaseapp.com",
+    projectId: "pro-spark-3951d",
+    storageBucket: "pro-spark-3951d.firebasestorage.app",
+    messagingSenderId: "657823534701",
+    appId: "1:657823534701:web:279208213c82edbfd97964"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Makes Firestore available to your other scripts
+  window.db = db;
+  window.firestoreTools = { collection, addDoc, getDocs };
+
+  console.log("✅ Firestore connected:", db);
+</script>  
 
 
 
