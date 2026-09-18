@@ -53,7 +53,7 @@
 <main class="main">
 <section class="page active" id="page-financial">
 <h1>Financial Overview</h1><p class="sub">Track wholesale costs, retail pricing and projected margins.</p>
-<div class="banner">☔ <b>PROSPARK SUGGESTS · RAINY SEASON</b><h3>Put an umbrella & raincoat stand by the door.</h3><p>Quick-grab seasonal products near the entrance can increase add-on sales.</p></div>
+<div class="banner"><span id="bannerIcon">☔</span> <b id="bannerLabel">PROSPARK SUGGESTS · RAINY SEASON</b><h3 id="bannerTitle">Put an umbrella & raincoat stand by the door.</h3><p id="bannerText">Quick-grab seasonal products near the entrance can increase add-on sales.</p></div>
 <div class="cards"><div class="card"><div class="label">Gross Projected Revenue</div><div class="value" id="fRevenue">₹0.00</div></div><div class="card"><div class="label">Total Batch Cost</div><div class="value" id="fCost">₹0.00</div></div><div class="card"><div class="label">Projected Net Profit</div><div class="value green" id="fProfit">₹0.00</div></div></div>
 <div class="grid2"><div class="panel"><h3>⚙️ Strategy Parameters</h3><div class="fields"><div class="field"><label>Business Sector</label><select id="fSector"><option>Groceries</option><option>Clothing</option><option>Electronics</option><option>Footwear</option><option>Medical</option></select></div><div class="field"><label>Current Season</label><select id="fSeason"><option>Rainy</option><option>Summer</option><option>Winter</option></select></div></div><div class="field"><label>Select Product</label><select id="fProduct"></select></div><div class="fields"><div class="field"><label>Units Purchased</label><input id="fUnits" type="number" value="100" min="0"></div><div class="field"><label>Discount (%)</label><input id="fDiscount" type="number" value="0" min="0" max="90"></div></div><button class="btn" id="calc">Calculate Projection</button></div>
 <div class="panel"><h3>📈 Income vs Expenses vs Net Profit</h3><div class="chart"><div class="bw"><div class="bar rev" id="bRev"></div><div class="bl">Revenue</div></div><div class="bw"><div class="bar cost" id="bCost"></div><div class="bl">Cost</div></div><div class="bw"><div class="bar prof" id="bProf"></div><div class="bl">Profit</div></div></div></div></div>
@@ -550,6 +550,20 @@ $("question").addEventListener("keydown",e=>{if(e.key==="Enter")sendBot();});
   window.firestoreTools = { collection, addDoc, getDocs };
 
   console.log("✅ Firestore connected:", db);
+   function updateBanner(season) {
+  const banners = {
+    Rainy: { icon: "☔", label: "PROSPARK SUGGESTS · RAINY SEASON", title: "Put an umbrella & raincoat stand by the door.", text: "Quick-grab seasonal products near the entrance can increase add-on sales." },
+    Summer: { icon: "☀️", label: "PROSPARK SUGGESTS · SUMMER SEASON", title: "Stock cold drinks and ice cream near the entrance.", text: "Hot weather boosts impulse buys on cold beverages and frozen treats." },
+    Winter: { icon: "❄️", label: "PROSPARK SUGGESTS · WINTER SEASON", title: "Display woolens and hot beverages upfront.", text: "Cold weather increases demand for warm clothing and hot drinks." }
+  };
+  const b = banners[season] || banners.Rainy;
+  document.getElementById("bannerIcon").textContent = b.icon;
+  document.getElementById("bannerLabel").textContent = b.label;
+  document.getElementById("bannerTitle").textContent = b.title;
+  document.getElementById("bannerText").textContent = b.text;
+}
+document.getElementById("fSeason").addEventListener("change", e => updateBanner(e.target.value));
+updateBanner(document.getElementById("fSeason").value);
 </script>  
 
 
