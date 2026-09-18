@@ -84,30 +84,139 @@
 </main></div>
 
 
-<script>
-/* Zero-backend account system (like FinVision on GitHub Pages) —
-   everything lives in the browser, no server required. */
-const SESSION="prospark_session", USERS="prospark_users";
-let currentUser=null,authMode="login";
-const au=id=>document.getElementById(id);
-function users(){try{return JSON.parse(localStorage.getItem(USERS)||"{}")}catch(e){return{}}}
-function saveUsers(x){localStorage.setItem(USERS,JSON.stringify(x))}
-async function hashPass(pw){const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pw));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("")}
-function authMsg(x,ok=false){au("authMessage").textContent=x;au("authMessage").style.color=ok?"#22c55e":"#ef5b3c"}
-function mode(m){authMode=m;au("authTitle").textContent=m==="login"?"Login to ProSpark":"Create ProSpark Account";au("authText").textContent=m==="login"?"Use your account credentials to access your dashboard.":"Create an account to save your ProSpark dashboard data.";au("nameField").style.display=m==="login"?"none":"block";au("authSubmit").textContent=m==="login"?"Login":"Create Account";au("switchText").textContent=m==="login"?"Don't have an account?":"Already have an account?";au("authSwitch").textContent=m==="login"?"Create Account":"Login";authMsg("")}
-au("authSwitch").onclick=()=>mode(authMode==="login"?"register":"login");
-function snap(){return{sales,billCount,profit,products:P.map(p=>({...p})),cash:Object.fromEntries(["open","c500","c200","c100","c50","c20","c10","coins"].map(id=>[id,$(id).value]))}}
-function restore(d){if(!d)return;sales=+d.sales||0;billCount=+d.billCount||0;profit=+d.profit||0;(d.products||[]).forEach(s=>{let p=P.find(x=>x.c===s.c);if(p)p.stock=+s.stock||0});if(d.cash)Object.keys(d.cash).forEach(id=>{if($(id))$(id).value=d.cash[id]});$("turnover").textContent=money(sales);$("bills").textContent=billCount;$("todayProfit").textContent=money(profit);renderProducts();renderCart();renderStock();renderClearance()}
-function saveData(){if(!currentUser)return;let u=users(),x=u[currentUser.email];if(x){x.data=snap();saveUsers(u)}}
-function loadData(){let u=users()[currentUser.email];if(u)restore(u.data)}
-function enter(u){currentUser={name:u.name||u.email,email:u.email};sessionStorage.setItem(SESSION,JSON.stringify(currentUser));au("authOverlay").style.display="none";au("accountbar").style.display="flex";au("userlabel").textContent=currentUser.name;loadData()}
-au("authSubmit").onclick=async()=>{let name=au("authName").value.trim(),email=au("authEmail").value.trim().toLowerCase(),password=au("authPassword").value;if(!email||!password||(authMode==="register"&&!name)){authMsg("Please fill all fields.");return}if(password.length<6){authMsg("Password must be at least 6 characters.");return}try{let x=users();if(authMode==="register"){if(x[email])throw Error("Account already exists.");x[email]={name,email,passwordHash:await hashPass(password),data:null};saveUsers(x);enter(x[email])}else{let z=x[email];if(!z||z.passwordHash!==await hashPass(password))throw Error("Invalid email or password.");enter(z)}}catch(e){authMsg(e.message)}};
-au("profileBtn").onclick=()=>{au("profileName").value=currentUser.name;au("profileEmail").value=currentUser.email;au("profileOverlay").style.display="flex"};
-au("closeProfile").onclick=()=>au("profileOverlay").style.display="none";
-au("saveProfile").onclick=()=>{let n=au("profileName").value.trim();if(!n)return;currentUser.name=n;au("userlabel").textContent=n;let x=users();if(x[currentUser.email]){x[currentUser.email].name=n;saveUsers(x)}au("profileMessage").textContent="Profile saved."};
-au("logoutBtn").onclick=()=>{saveData();sessionStorage.removeItem(SESSION);currentUser=null;au("accountbar").style.display="none";au("authOverlay").style.display="flex";mode("login")};
-window.addEventListener("load",()=>{try{let u=JSON.parse(sessionStorage.getItem(SESSION)||"null");if(u&&users()[u.email]){currentUser=u;au("authOverlay").style.display="none";au("accountbar").style.display="flex";au("userlabel").textContent=u.name||u.email;loadData()}}catch(e){}});
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut, updateProfile
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBtcT4XJCnvSHuacZKkmh5TgL34DogSzPs",
+  authDomain: "pro-spark-3951d.firebaseapp.com",
+  projectId: "pro-spark-3951d",
+  storageBucket: "pro-spark-3951d.firebasestorage.app",
+  messagingSenderId: "657823534701",
+  appId: "1:657823534701:web:279208213c82edbfd97964"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null, authMode = "login";
+const au = id => document.getElementById(id);
+
+function authMsg(x, ok = false) {
+  au("authMessage").textContent = x;
+  au("authMessage").style.color = ok ? "#22c55e" : "#ef5b3c";
+}
+
+function mode(m) {
+  authMode = m;
+  au("authTitle").textContent = m === "login" ? "Login to ProSpark" : "Create ProSpark Account";
+  au("authText").textContent = m === "login" ? "Use your account credentials to access your dashboard." : "Create an account to save your ProSpark dashboard data.";
+  au("nameField").style.display = m === "login" ? "none" : "block";
+  au("authSubmit").textContent = m === "login" ? "Login" : "Create Account";
+  au("switchText").textContent = m === "login" ? "Don't have an account?" : "Already have an account?";
+  au("authSwitch").textContent = m === "login" ? "Create Account" : "Login";
+  authMsg("");
+}
+au("authSwitch").onclick = () => mode(authMode === "login" ? "register" : "login");
+
+function snap() {
+  return {
+    sales, billCount, profit,
+    products: P.map(p => ({ ...p })),
+    cash: Object.fromEntries(["open","c500","c200","c100","c50","c20","c10","coins"].map(id => [id, $(id).value]))
+  };
+}
+function restore(d) {
+  if (!d) return;
+  sales = +d.sales || 0;
+  billCount = +d.billCount || 0;
+  profit = +d.profit || 0;
+  (d.products || []).forEach(s => { let p = P.find(x => x.c === s.c); if (p) p.stock = +s.stock || 0; });
+  if (d.cash) Object.keys(d.cash).forEach(id => { if ($(id)) $(id).value = d.cash[id]; });
+  $("turnover").textContent = money(sales);
+  $("bills").textContent = billCount;
+  $("todayProfit").textContent = money(profit);
+  renderProducts(); renderCart(); renderStock(); renderClearance();
+}
+
+async function saveData() {
+  if (!currentUser) return;
+  await setDoc(doc(db, "users", currentUser.uid), { data: snap() }, { merge: true });
+}
+async function loadData() {
+  const snapDoc = await getDoc(doc(db, "users", currentUser.uid));
+  if (snapDoc.exists()) restore(snapDoc.data().data);
+}
+
+function enter(user) {
+  currentUser = user;
+  au("authOverlay").style.display = "none";
+  au("accountbar").style.display = "flex";
+  au("userlabel").textContent = user.displayName || user.email;
+  loadData();
+}
+
+au("authSubmit").onclick = async () => {
+  const name = au("authName").value.trim();
+  const email = au("authEmail").value.trim().toLowerCase();
+  const password = au("authPassword").value;
+  if (!email || !password || (authMode === "register" && !name)) { authMsg("Please fill all fields."); return; }
+  if (password.length < 6) { authMsg("Password must be at least 6 characters."); return; }
+  try {
+    if (authMode === "register") {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, "users", cred.user.uid), { name, email, data: null });
+      enter({ uid: cred.user.uid, email, displayName: name });
+    } else {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      enter(cred.user);
+    }
+  } catch (e) {
+    authMsg(e.message.replace("Firebase: ", "").replace(/\(auth\/.*\)\.?/, "").trim());
+  }
+};
+
+au("profileBtn").onclick = () => {
+  au("profileName").value = currentUser.displayName || "";
+  au("profileEmail").value = currentUser.email;
+  au("profileOverlay").style.display = "flex";
+};
+au("closeProfile").onclick = () => au("profileOverlay").style.display = "none";
+au("saveProfile").onclick = async () => {
+  const n = au("profileName").value.trim();
+  if (!n) return;
+  await updateProfile(auth.currentUser, { displayName: n });
+  await setDoc(doc(db, "users", currentUser.uid), { name: n }, { merge: true });
+  au("userlabel").textContent = n;
+  au("profileMessage").textContent = "Profile saved.";
+};
+
+au("logoutBtn").onclick = async () => {
+  await saveData();
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    enter(user);
+  } else {
+    currentUser = null;
+    au("accountbar").style.display = "none";
+    au("authOverlay").style.display = "flex";
+    mode("login");
+  }
+});
 </script>
+ 
 <script>
 const P=[
 {c:"1001",n:"Umbrella",cat:"Rainwear",sector:"Clothing",cost:250,price:399,stock:50,season:"Rainy"},
